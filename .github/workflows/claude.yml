@@ -17,9 +17,9 @@ jobs:
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'pull_request' && github.event.action != 'synchronize') || 
+      (github.event_name == 'pull_request' && github.event.action != 'synchronize') ||
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
-    
+
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -38,17 +38,30 @@ jobs:
         run: |
           curl -fsSL https://bun.sh/install | bash
           export PATH="$HOME/.bun/bin:$PATH"
-          
+
           mkdir -p $HOME/.claude-code-router
-          cat << EOF > $HOME/.claude-code-router/config.json
+          cat << 'EOF' > $HOME/.claude-code-router/config.json
           {
-            "log": true,
+            "LOG": true,
             "NON_INTERACTIVE_MODE": true,
             "API_TIMEOUT_MS": 600000,
             "HOST": "127.0.0.1",
             "PORT": 3456,
-            "transformers": ["groq"],
+            "transformers": [],
             "Providers": [
+              {
+                "name": "openrouter",
+                "api_base_url": "https://openrouter.ai/api/v1/chat/completions",
+                "api_key": "$OPENROUTER_API_KEY",
+                "models": [
+                  "qwen/qwen3-coder:free",
+                  "meta-llama/llama-3.3-70b-instruct:online",
+                  "openrouter/free"
+                ],
+                "transformer": {
+                  "use": ["openrouter"]
+                }
+              },
               {
                 "name": "groq",
                 "api_base_url": "https://api.groq.com/openai/v1/chat/completions",
@@ -65,10 +78,10 @@ jobs:
               }
             ],
             "Router": {
-              "default": "groq,llama-3.3-70b-versatile",
+              "default": "openrouter,qwen/qwen3-coder:free",
               "background": "groq,llama-3.1-8b-instant",
-              "think": "groq,llama-3.3-70b-versatile",
-              "longContext": "groq,llama-3.3-70b-versatile",
+              "think": "openrouter,qwen/qwen3-coder:free",
+              "longContext": "openrouter,qwen/qwen3-coder:free",
               "longContextThreshold": 60000,
               "webSearch": "groq,groq/compound",
               "image": "groq,llama-3.3-70b-versatile"
@@ -77,12 +90,13 @@ jobs:
           EOF
         shell: bash
         env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
 
       - name: Start Claude Code Router
         run: |
-          nohup $HOME/.bun/bin/bunx @musistudio/claude-code-router@latest start > router.log 2>&1 &
-          # Wait for the port to open
+          export PATH="$HOME/.bun/bin:$PATH"
+          nohup bunx @musistudio/claude-code-router@latest start > router.log 2>&1 &
           for i in {1..15}; do
             if nc -z 127.0.0.1 3456; then
               echo "Router is active on port 3456"
