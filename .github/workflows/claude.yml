@@ -102,3 +102,4 @@ jobs:
           ANTHROPIC_BASE_URL: http://127.0.0.1:3456
         with:
           anthropic_api_key: "used-for-local-routing"
+          allowed_tools: "Bash,Read,Write,Glob,Grep,LS,mcp__github_comment__update_claude_comment"
