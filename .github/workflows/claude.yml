@@ -13,7 +13,6 @@ on:
 
 jobs:
   claude:
-    # Full official logic: Triggers if @claude is in comments, reviews, issue bodies, or issue titles
     if: |
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
@@ -27,7 +26,7 @@ jobs:
       pull-requests: write
       issues: write
       id-token: write
-      actions: read # Required for Claude to read CI/test results on PRs
+      actions: read
 
     steps:
       - name: Checkout repository
@@ -38,12 +37,17 @@ jobs:
       - name: Prepare Environment
         run: |
           curl -fsSL https://bun.sh/install | bash
+          export PATH="$HOME/.bun/bin:$PATH"
+          
           mkdir -p $HOME/.claude-code-router
           cat << EOF > $HOME/.claude-code-router/config.json
           {
             "log": true,
             "NON_INTERACTIVE_MODE": true,
             "API_TIMEOUT_MS": 600000,
+            "HOST": "127.0.0.1",
+            "PORT": 3456,
+            "transformers": ["groq"],
             "Providers": [
               {
                 "name": "groq",
@@ -51,8 +55,9 @@ jobs:
                 "api_key": "$GROQ_API_KEY",
                 "models": [
                   "llama-3.3-70b-versatile",
-                  "qwen/qwen3-32b",
-                  "openai/gpt-oss-20b"
+                  "llama-3.1-8b-instant",
+                  "qwen-2.5-coder-32b",
+                  "groq/compound"
                 ],
                 "transformer": {
                   "use": ["groq"]
@@ -60,12 +65,12 @@ jobs:
               }
             ],
             "Router": {
-              "default": "groq,qwen/qwen3-32b",
-              "background": "groq,openai/gpt-oss-20b",
-              "think": "groq,qwen/qwen3-32b",
+              "default": "groq,llama-3.3-70b-versatile",
+              "background": "groq,llama-3.1-8b-instant",
+              "think": "groq,llama-3.3-70b-versatile",
               "longContext": "groq,llama-3.3-70b-versatile",
               "longContextThreshold": 60000,
-              "webSearch": "groq,qwen/qwen3-32b",
+              "webSearch": "groq,groq/compound",
               "image": "groq,llama-3.3-70b-versatile"
             }
           }
@@ -76,15 +81,21 @@ jobs:
 
       - name: Start Claude Code Router
         run: |
-          nohup ~/.bun/bin/bunx @musistudio/claude-code-router@latest start &
-          sleep 5
-          echo "Router started"
+          nohup $HOME/.bun/bin/bunx @musistudio/claude-code-router@latest start > router.log 2>&1 &
+          # Wait for the port to open
+          for i in {1..15}; do
+            if nc -z 127.0.0.1 3456; then
+              echo "Router is active on port 3456"
+              break
+            fi
+            sleep 1
+          done
         shell: bash
 
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
         env:
-          ANTHROPIC_BASE_URL: http://localhost:3456
+          ANTHROPIC_BASE_URL: http://127.0.0.1:3456/v1
         with:
-          anthropic_api_key: "any-string-is-ok"
+          anthropic_api_key: "used-for-local-routing"
