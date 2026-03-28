@@ -1,0 +1,30 @@
+name: Claude Code
+on:
+  pull_request:
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+
+jobs:
+  claude:
+    if: github.event_name == 'pull_request' || contains(github.event.comment.body, '@claude')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude Code Action
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # This is where you pick the model
+          claude_args: --model qwen/qwen3-coder:free
+        env:
+          # This redirects the Action to OpenRouter
+          ANTHROPIC_BASE_URL: https://openrouter.ai/api/v1
