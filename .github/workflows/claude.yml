@@ -33,14 +33,36 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Changed from default '1' to '0' so Claude can see your git history
+          fetch-depth: 0
+
+      - name: Prepare Environment
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          mkdir -p $HOME/.claude-code-router
+          cat << EOF > $HOME/.claude-code-router/config.json
+          {
+            "log": true,
+            "NON_INTERACTIVE_MODE": true,
+            "OPENAI_API_KEY": "$GROQ_API_KEY",
+            "OPENAI_BASE_URL": "https://api.groq.com/openai/v1",
+            "OPENAI_MODEL": "llama-3.3-70b-versatile"
+          }
+          EOF
+        shell: bash
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+
+      - name: Start Claude Code Router
+        run: |
+          nohup ~/.bun/bin/bunx @musistudio/claude-code-router@latest start &
+          sleep 5
+          echo "Router started"
+        shell: bash
 
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          claude_args: --model llama-3.3-70b-versatile
         env:
-          # Set the base URL for the Anthropic API to use Groq
-          ANTHROPIC_BASE_URL: https://api.groq.com/openai/v1
+          ANTHROPIC_BASE_URL: http://localhost:3456
+        with:
+          anthropic_api_key: "any-string-is-ok"
