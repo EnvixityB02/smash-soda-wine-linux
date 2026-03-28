@@ -40,8 +40,8 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          # Use the qwen3-coder:free model on OpenRouter, which is optimized for code tasks and free to use with an OpenRouter account
-          claude_args: --model qwen/qwen3-coder:free
+          # Use the Qwen 3 Next 80B A3B Instruct model, which is optimized for code tasks and available for free on OpenRouter
+          claude_args: --model qwen/qwen3-next-80b-a3b-instruct:free
         env:
           # Set the base URL for the Anthropic API to use OpenRouter
           ANTHROPIC_BASE_URL: https://openrouter.ai/api/v1
