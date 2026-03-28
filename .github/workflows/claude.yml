@@ -37,10 +37,8 @@ jobs:
       - name: Prepare Environment
         run: |
           curl -fsSL https://bun.sh/install | bash
-          export PATH="$HOME/.bun/bin:$PATH"
-
           mkdir -p $HOME/.claude-code-router
-          cat << EOF > $HOME/.claude-code-router/config.json
+          cat << 'EOF' > $HOME/.claude-code-router/config.json
           {
             "LOG": true,
             "NON_INTERACTIVE_MODE": true,
@@ -52,7 +50,7 @@ jobs:
               {
                 "name": "openrouter",
                 "api_base_url": "https://openrouter.ai/api/v1/chat/completions",
-                "api_key": "${OPENROUTER_API_KEY}",
+                "api_key": "${{ secrets.OPENROUTER_API_KEY }}",
                 "models": [
                   "qwen/qwen3-coder:free",
                   "meta-llama/llama-3.3-70b-instruct:free",
@@ -66,7 +64,7 @@ jobs:
               {
                 "name": "groq",
                 "api_base_url": "https://api.groq.com/openai/v1/chat/completions",
-                "api_key": "${GROQ_API_KEY}",
+                "api_key": "${{ secrets.GROQ_API_KEY }}",
                 "models": [
                   "llama-3.3-70b-versatile",
                   "llama-3.1-8b-instant",
@@ -90,27 +88,17 @@ jobs:
           }
           EOF
         shell: bash
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
 
       - name: Start Claude Code Router
         run: |
-          export PATH="$HOME/.bun/bin:$PATH"
-          nohup bunx @musistudio/claude-code-router@latest start > router.log 2>&1 &
-          for i in {1..15}; do
-            if nc -z 127.0.0.1 3456; then
-              echo "Router is active on port 3456"
-              break
-            fi
-            sleep 1
-          done
+          nohup ~/.bun/bin/bunx @musistudio/claude-code-router@latest start &
+          sleep 3
         shell: bash
 
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
         env:
-          ANTHROPIC_BASE_URL: http://127.0.0.1:3456/v1
+          ANTHROPIC_BASE_URL: http://127.0.0.1:3456
         with:
           anthropic_api_key: "used-for-local-routing"
