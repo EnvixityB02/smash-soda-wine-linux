@@ -40,7 +40,7 @@ jobs:
           export PATH="$HOME/.bun/bin:$PATH"
 
           mkdir -p $HOME/.claude-code-router
-          cat << 'EOF' > $HOME/.claude-code-router/config.json
+          cat << EOF > $HOME/.claude-code-router/config.json
           {
             "LOG": true,
             "NON_INTERACTIVE_MODE": true,
@@ -52,20 +52,21 @@ jobs:
               {
                 "name": "openrouter",
                 "api_base_url": "https://openrouter.ai/api/v1/chat/completions",
-                "api_key": "$OPENROUTER_API_KEY",
+                "api_key": "${OPENROUTER_API_KEY}",
                 "models": [
                   "qwen/qwen3-coder:free",
+                  "meta-llama/llama-3.3-70b-instruct:free",
                   "meta-llama/llama-3.3-70b-instruct:online",
                   "openrouter/free"
                 ],
                 "transformer": {
-                  "use": ["openrouter"]
+                  "use": ["openrouter", ["maxtoken", { "max_tokens": 16000 }]]
                 }
               },
               {
                 "name": "groq",
                 "api_base_url": "https://api.groq.com/openai/v1/chat/completions",
-                "api_key": "$GROQ_API_KEY",
+                "api_key": "${GROQ_API_KEY}",
                 "models": [
                   "llama-3.3-70b-versatile",
                   "llama-3.1-8b-instant",
@@ -78,13 +79,13 @@ jobs:
               }
             ],
             "Router": {
-              "default": "openrouter,qwen/qwen3-coder:free",
-              "background": "groq,llama-3.1-8b-instant",
-              "think": "openrouter,qwen/qwen3-coder:free",
-              "longContext": "openrouter,qwen/qwen3-coder:free",
+              "default": "openrouter,openrouter/free",
+              "background": "openrouter,openrouter/free",
+              "think": "openrouter,openrouter/free",
+              "longContext": "openrouter,openrouter/free",
               "longContextThreshold": 60000,
-              "webSearch": "groq,groq/compound",
-              "image": "groq,llama-3.3-70b-versatile"
+              "webSearch": "openrouter,openrouter/free",
+              "image": "openrouter,openrouter/free"
             }
           }
           EOF
